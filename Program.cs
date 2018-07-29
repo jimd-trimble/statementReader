@@ -15,10 +15,11 @@ namespace statementReader
         private static string docPath;
         //private static int docCount;
         private static long katPersonal = 9610;
-        private static long jimPersonal = 6830;
-        private static long joint = 9313;
-        private static long savings1 = 5436;
-        private static long savings2 = 3650;
+        private static long jimPersonal = 7427296830;
+        private static long joint = 7427299313;
+        private static long savings1 = 7217495436; //dillon j savings, JOINT
+        private static long savings2 = 3650; // unknown.
+        private static long katCredit = 4465420198396160;
         private static List<Account> allAccounts;
         private static string year = "2018";
 
@@ -50,6 +51,16 @@ namespace statementReader
 
         private static void SetUpAccounts(bool includeSavings=false)
         {
+            allAccounts.Add(new Account
+            {
+                Id = Guid.NewGuid(),
+                Name = "KatCredit",
+                Number = katCredit,
+                Owner = "Katiana",
+                Type = AccountType.Credit,
+                Transactions = new List<Transaction>()
+            });
+
             allAccounts.Add(new Account
             {
                 Id = Guid.NewGuid(),
@@ -113,7 +124,7 @@ namespace statementReader
             {
                 foreach(var a in allAccounts)
                 {
-                    a.Transactions.AddRange(txt.Run(a.Number.ToString(), f));
+                    a.Transactions.AddRange(txt.Run(a.Number.ToString(), f, a.Type == AccountType.Credit));
                 }
             }
         }

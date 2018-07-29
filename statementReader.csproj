@@ -82,6 +82,7 @@
     <Compile Include="Business\Reader.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="Business\StatementExtractor.cs" />
+    <Compile Include="Contracts\CreditSectionInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
