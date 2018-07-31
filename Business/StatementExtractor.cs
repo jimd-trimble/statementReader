@@ -225,7 +225,7 @@ namespace statementReader.Business
                     {
                         if (!int.TryParse(parseYear[2], out year))
                         {
-                            var stop = "stop!";
+                            year = DateTime.MinValue.Year;
                         }
                     }
                 }
@@ -240,13 +240,14 @@ namespace statementReader.Business
                 var startIdx = -1;
 
                 //var contText = pageTextStrings.FirstOrDefault(y => y.Text.Contains(flag1));
-                if (hasBalances)
+                var statementInfo = new CreditSectionInfo(pageTextStrings);
+                if (statementInfo.nextSectionIdx > -1)
                 {
-                    startIdx = pageTextStrings.IndexOf(pageTextStrings.First(y => y.Text.Contains(lbegining))) + 1;
+                    startIdx = statementInfo.nextSectionIdx;
                 }
-                else if (contText != null)
+                else if (statementInfo.LastPage() && statementInfo.nextSectionType == SectionType.None)
                 {
-                    startIdx = pageTextStrings.IndexOf(contText) + 1;
+                    continue;
                 }
                 else
                 {
@@ -254,6 +255,8 @@ namespace statementReader.Business
                 }
 
                 Transaction transactionNowAndPrevious = null;
+                
+                // Should I turn this into a while loop based on nextSectionType != SectionType.None?
                 for (var i = startIdx; i < pageTextStrings.Count; i++)
                 {
                     var textString = pageTextStrings[i];

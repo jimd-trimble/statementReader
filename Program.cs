@@ -18,7 +18,7 @@ namespace statementReader
         private static long jimPersonal = 7427296830;
         private static long joint = 7427299313;
         private static long savings1 = 7217495436; //dillon j savings, JOINT
-        private static long savings2 = 3650; // unknown.
+        private static long savings2 = 3650; // unknown brokerage accnt b/t Katiana & Chris, opened 12/18/2013. Ed passed spring 2015...
         private static long katCredit = 4465420198396160;
         private static List<Account> allAccounts;
         private static string year = "2018";
