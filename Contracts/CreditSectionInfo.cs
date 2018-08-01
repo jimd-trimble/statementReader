@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
-using statementReader.Contracts;
-using org.pdfclown.files;
-using org.pdfclown.tools;
 using org.pdfclown.documents.contents;
-using org.pdfclown.documents;
 
 namespace statementReader.Contracts
 {
@@ -17,57 +13,58 @@ namespace statementReader.Contracts
         Interest,
         Payments,
         Credits,
+/*
         All,
+*/
         None
     }
 
     public class CreditSectionInfo
     {
-        public static string endOfSection = "FOR THIS PERIOD";
+        public static string EndOfSectionFlag { get; } = "FOR THIS PERIOD";
+        public IList<ITextString> pageTextStrings { get; }
+        public int CurrentSectionIdx { get; private set; }
+        public SectionType CurrentSectionType { get; private set; }
+        public bool GetPurchases { get; private set; }
+        public bool GetFees { get; private set; }
+        public bool GetInterest { get; private set; }
+        public bool GetPayments { get; private set; }
+        public bool GetCredits { get; private set; }
+        public int IdxTransactions { get; private set; }
+        public int IdxPurchases { get; private set; }
+        public int IdxFees { get; private set; }
+        public int IdxInterest { get; private set; }
+        public int IdxPayments { get; private set; }
+        public int IdxCredit { get; private set; }
 
-        public int nextSectionIdx { get; private set; }
-        public SectionType nextSectionType { get; private set; }
-        public bool getPurchases { get; private set; }
-        public bool getFees { get; private set; }
-        public bool getInterest { get; private set; }
-        public bool getPayments { get; private set; }
-        public bool getCredits { get; private set; }
-        public int idxTransactions { get; private set; }
-        public int idxPurchases { get; private set; }
-        public int idxFees { get; private set; }
-        public int idxInterest { get; private set; }
-        public int idxPayments { get; private set; }
-        public int idxCredit { get; private set; }
-
-        private IList<ITextString> pageTextStrings;
-        private string transactionFlag = "Transactions";
-        private string paymentFlag = "Payments";
-        private string creditFlag = "Other Credits";
-        private string purchaseFlag = "Purchases, Balance Transfers & Other Charges";
-        private string feesFlag = "Fees Charged";
-        private string interestFlag = "Interest Charged";
-        private string endOfData = "Totals Year-to-Date";
+        private const string TransactionFlag = "Transactions";
+        private const string PaymentFlag = "Payments";
+        private const string CreditFlag = "Other Credits";
+        private const string PurchaseFlag = "Purchases, Balance Transfers & Other Charges";
+        private const string FeesFlag = "Fees Charged";
+        private const string InterestFlag = "Interest Charged";
+        private const string EndOfData = "Totals Year-to-Date";
 
         public CreditSectionInfo(IList<ITextString> pageText)
         {
-            this.pageTextStrings = pageText;
+            pageTextStrings = pageText;
             InitializeInfo();
         }
 
         private void InitializeInfo()
         {
-            idxTransactions = GetIndexFromFlag(transactionFlag);
-            if (idxTransactions == -1)
+            IdxTransactions = GetIndexFromFlag(TransactionFlag);
+            if (IdxTransactions == -1)
             {
                 ResetIndexes();
             }
             else
             {
-                idxFees = GetIndexFromFlag(feesFlag);
-                idxCredit = GetIndexFromFlag(creditFlag);
-                idxInterest = GetIndexFromFlag(interestFlag);
-                idxPayments = GetIndexFromFlag(paymentFlag);
-                idxPurchases = GetIndexFromFlag(purchaseFlag);
+                IdxFees = GetIndexFromFlag(FeesFlag);
+                IdxCredit = GetIndexFromFlag(CreditFlag);
+                IdxInterest = GetIndexFromFlag(InterestFlag);
+                IdxPayments = GetIndexFromFlag(PaymentFlag);
+                IdxPurchases = GetIndexFromFlag(PurchaseFlag);
             }
             SetBoolsFromIndexes();
         }
@@ -96,17 +93,17 @@ namespace statementReader.Contracts
         private void ResetIndexes()
         {
 
-            idxTransactions = -1;
-            idxPurchases = -1;
-            idxFees = -1;
-            idxInterest = -1;
-            idxPayments = -1;
-            idxCredit = -1;
+            IdxTransactions = -1;
+            IdxPurchases = -1;
+            IdxFees = -1;
+            IdxInterest = -1;
+            IdxPayments = -1;
+            IdxCredit = -1;
         }
 
         public bool LastPage()
         {
-            return GetIndexFromFlag(endOfData) > -1;
+            return GetIndexFromFlag(EndOfData) > -1;
         }
 
         /// <summary>
@@ -114,47 +111,47 @@ namespace statementReader.Contracts
         /// </summary>
         /// <returns>The index for the beginning of the next section.</returns>
         /// <param name="section">The section just completed.</param>
-        public int EndOfSection(SectionType section)
+        public int GetNextIdx()
         {
-            switch(section)
+            switch(CurrentSectionType)
             {
                 case SectionType.Fees:
                     {
-                        getFees = false;
-                        idxFees = -1;
+                        GetFees = false;
+                        IdxFees = -1;
                         break;
                     }
                 case SectionType.Interest:
                     {
-                        getInterest = false;
-                        idxInterest = -1;
+                        GetInterest = false;
+                        IdxInterest = -1;
                         break;
                     }
                 case SectionType.Payments:
                     {
-                        getPayments = false;
-                        idxPayments = -1;
+                        GetPayments = false;
+                        IdxPayments = -1;
                         break;
                     }
                 case SectionType.Credits:
                     {
-                        getCredits = false;
-                        idxCredit = -1;
+                        GetCredits = false;
+                        IdxCredit = -1;
                         break;
                     }
                 case SectionType.Purchases:
                     {
-                        getPurchases = false;
-                        idxPurchases = -1;
+                        GetPurchases = false;
+                        IdxPurchases = -1;
                         break;
                     }
+                case SectionType.None:
+                    break;
                 default:
-                    {
-                        break;
-                    }
+                    throw new ArgumentOutOfRangeException();
             }
             SetNexSection();
-            return nextSectionIdx;
+            return CurrentSectionIdx;
         }
 
         private void SetNexSection()
@@ -166,55 +163,57 @@ namespace statementReader.Contracts
              * Fees
              * Interest
             */
-            if(getPayments)
+            if(GetPayments)
             {
-                nextSectionType = SectionType.Payments;
-                nextSectionIdx = idxPayments;
+                CurrentSectionType = SectionType.Payments;
+                CurrentSectionIdx = IdxPayments;
             }
-            else if (getCredits)
+            else if (GetCredits)
             {
-                nextSectionType = SectionType.Credits;
-                nextSectionIdx = idxCredit;
+                CurrentSectionType = SectionType.Credits;
+                CurrentSectionIdx = IdxCredit;
             }
-            else if (getPurchases)
+            else if (GetPurchases)
             {
-                nextSectionType = SectionType.Purchases;
-                nextSectionIdx = idxPurchases;
+                CurrentSectionType = SectionType.Purchases;
+                CurrentSectionIdx = IdxPurchases;
             }
-            else if (getFees)
+            else if (GetFees)
             {
-                nextSectionType = SectionType.Fees;
-                nextSectionIdx = idxFees;
+                CurrentSectionType = SectionType.Fees;
+                CurrentSectionIdx = IdxFees;
             }
-            else if (getInterest)
+            else if (GetInterest)
             {
-                nextSectionType = SectionType.Interest;
-                nextSectionIdx = idxInterest;
+                CurrentSectionType = SectionType.Interest;
+                CurrentSectionIdx = IdxInterest;
             }
             else
             {
-                nextSectionType = SectionType.None;
-                nextSectionIdx = -1;
+                CurrentSectionType = SectionType.None;
+                CurrentSectionIdx = -1;
             }
         }
 
+/*
         private void ResetBools()
         {
-            getPurchases = false;
-            getFees = false;
-            getInterest = false;
-            getPayments = false;
-            getCredits = false;
+            GetPurchases = false;
+            GetFees = false;
+            GetInterest = false;
+            GetPayments = false;
+            GetCredits = false;
         }
+*/
 
 
         private void SetBoolsFromIndexes()
         {
-            getPurchases = idxPurchases > -1;
-            getFees = idxFees > -1; 
-            getInterest = idxInterest > -1;
-            getPayments = idxPayments > -1;
-            getCredits = idxCredit > -1;
+            GetPurchases = IdxPurchases > -1;
+            GetFees = IdxFees > -1; 
+            GetInterest = IdxInterest > -1;
+            GetPayments = IdxPayments > -1;
+            GetCredits = IdxCredit > -1;
         }
 
         private int GetIndexFromFlag(string flag)
