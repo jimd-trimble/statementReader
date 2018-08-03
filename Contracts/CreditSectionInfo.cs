@@ -67,6 +67,7 @@ namespace statementReader.Contracts
                 IdxPurchases = GetIndexFromFlag(PurchaseFlag);
             }
             SetBoolsFromIndexes();
+            SetNexSection();
         }
 
         //private void UpdateInfo()
@@ -151,7 +152,7 @@ namespace statementReader.Contracts
                     throw new ArgumentOutOfRangeException();
             }
             SetNexSection();
-            return CurrentSectionIdx;
+            return CurrentSectionIdx++;
         }
 
         private void SetNexSection()
@@ -221,7 +222,7 @@ namespace statementReader.Contracts
             var match = GetTextStringMatch(flag);
             return match == null
                 ? -1
-                : GetIndex(match);
+                : GetIndex(match)+1;
         }
 
         private int GetIndex(ITextString textString)

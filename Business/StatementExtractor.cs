@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Drawing.Text;
 using System.Linq;
 using System.Collections.Generic;
+using CommandLine;
 using statementReader.Contracts;
 using org.pdfclown.files;
 using org.pdfclown.tools;
@@ -17,47 +19,51 @@ namespace statementReader.Business
         private const string Eof = "Ending balance on ";
         private string filePath = "";
 
+
+        private int GetYear(IList<ITextString> pageTextStrings)
+        {            
+            const string yearHeader = "Statement Billing Period ";
+            var year = 1977;
+
+            var yearText = pageTextStrings.FirstOrDefault(x => x.Text.Contains(yearHeader));
+            if (yearText == null)
+            {
+                return year;
+            }
+            
+            var headerSplit = pageTextStrings[pageTextStrings.IndexOf(yearText)].Text.Split('/').ToList();
+            if (headerSplit.Count > 0)
+            {
+                int.TryParse(headerSplit[headerSplit.Count - 1], out year);
+            }
+            return year;
+        }
+        
+
         private List<Transaction> PageIterator(Pages pages, string accountFlag)
         {
             var extractor = new TextExtractor();
-            var yearHeader = "";
-            var year = 1977;
             var transactions = new List<Transaction>();
             foreach (var page in pages)
             {
                 IList<ITextString> pageTextStrings;
                 try
                 {
+                    var tst1 = extractor.Extract(page);
                     pageTextStrings = extractor.Extract(page)[TextExtractor.DefaultArea];
                 }
-                catch
+                catch(Exception e)
+                {
+                    Console.WriteLine(e);
+                    continue;
+                }
+
+                if (!pageTextStrings.Any(x => x.Text.Contains(accountFlag)))
                 {
                     continue;
                 }
 
-                var headerSplit = pageTextStrings[0].Text.Split(' ').ToList();
-                var dashIdx = headerSplit.IndexOf(yearHeader);
-                if (dashIdx > -1)
-                {
-                    //int.TryParse(headerSplit[dashIdx - 1], out year);
-                    var tst1 = headerSplit[dashIdx + 1];
-                    var parseYear = tst1.Split('/');
-                    if (parseYear.Length >= 3)
-                    {
-                        if (!int.TryParse(parseYear[2], out year))
-                        {
-                            year = DateTime.MinValue.Year;
-                        }
-                    }
-                }
-
-                var accountPage = pageTextStrings.Any(x => x.Text.Contains(accountFlag));
-
-                if (!accountPage)
-                {
-                    continue;
-                }
-
+                var year = GetYear(pageTextStrings);
                 transactions.AddRange(TextIterator(pageTextStrings, year));
             }
 
@@ -162,7 +168,8 @@ namespace statementReader.Business
                 {
                     int? card = null;
                     var desc = textString.Text.Trim().Split(' ').ToList();
-                    if ((desc.Count > 1 && desc[desc.Count - 2].ToLower() == "card" || desc[desc.Count - 1].Trim().Length == 4) && int.TryParse(desc[desc.Count - 1], out var cardTst))
+                    if ((desc.Count > 1 && desc[desc.Count - 2].ToLower() == "card" || desc[desc.Count - 1].Trim()
+                            .Length == 4) && int.TryParse(desc[desc.Count - 1], out var cardTst))
                     {
                         card = cardTst;
                     }
@@ -184,7 +191,7 @@ namespace statementReader.Business
                 throw new Exception("Invalid account number, must be longer than 5 digits.");
             }
 
-            var last4 = account.Remove(account.Length - 5);
+            var last4 = account.Substring(account.Length - 4);
             var accountFlag = $"Ending in {last4}";
             return PageIterator(document.Pages, accountFlag);
         }
@@ -356,7 +363,7 @@ namespace statementReader.Business
             account = pAccount;
             filePath = pFilePath;
             List<Transaction> retVal;
-            using (File file = new File(filePath))
+            using (var file = new File(filePath))
             {
                 var document = file.Document;
 

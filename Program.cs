@@ -22,6 +22,7 @@ namespace statementReader
         private static long katCredit = 4465420198396160;
         private static List<Account> allAccounts;
         private static string year = "2018";
+        private static bool creditOnly = true;
 
         public static int Main(string[] args)
         {
@@ -61,6 +62,11 @@ namespace statementReader
                 Transactions = new List<Transaction>()
             });
 
+            if (creditOnly)
+            {
+                return;
+            }
+            
             allAccounts.Add(new Account
             {
                 Id = Guid.NewGuid(),
@@ -116,7 +122,7 @@ namespace statementReader
 
         private static void GetTransactions()
         {
-            docPath = $"/Users/jimmyd/Documents/Divorce/{year}/";
+            docPath = $"/Users/jimmyd/Dev/statementReader/";
             var txt = new StatementExtractor();
             var files = Directory.GetFiles(docPath, "*pdf").ToList();
             var all = Directory.GetFiles(docPath);
