@@ -21,7 +21,7 @@ namespace statementReader
         private static long savings2 = 3650; // unknown brokerage accnt b/t Katiana & Chris, opened 12/18/2013. Ed passed spring 2015...
         private static long katCredit = 4465420198396160;
         private static List<Account> allAccounts;
-        private static string year = "2018";
+        private static string year = "2017";
         private static bool creditOnly = true;
 
         public static int Main(string[] args)
@@ -122,7 +122,8 @@ namespace statementReader
 
         private static void GetTransactions()
         {
-            docPath = $"/Users/jimmyd/Dev/statementReader/";
+//            docPath = $"/Users/jimmyd/Dev/statementReader/";
+            docPath = $"/Users/jimmyd/Documents/Divorce/katCredit/{year}/";
             var txt = new StatementExtractor();
             var files = Directory.GetFiles(docPath, "*pdf").ToList();
             var all = Directory.GetFiles(docPath);

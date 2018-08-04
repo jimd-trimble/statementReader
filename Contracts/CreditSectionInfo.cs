@@ -24,13 +24,16 @@ namespace statementReader.Contracts
         public static string EndOfSectionFlag { get; } = "FOR THIS PERIOD";
         public IList<ITextString> pageTextStrings { get; }
         public int CurrentSectionIdx { get; private set; }
+        public int CardLast4 { get; set; }
+        public int Year { get; set; }
         public SectionType CurrentSectionType { get; private set; }
         public bool GetPurchases { get; private set; }
         public bool GetFees { get; private set; }
         public bool GetInterest { get; private set; }
         public bool GetPayments { get; private set; }
         public bool GetCredits { get; private set; }
-        public int IdxTransactions { get; private set; }
+        public int IdxMin { get; set; }
+//        public int IdxTransactions { get; private set; }
         public int IdxPurchases { get; private set; }
         public int IdxFees { get; private set; }
         public int IdxInterest { get; private set; }
@@ -38,33 +41,36 @@ namespace statementReader.Contracts
         public int IdxCredit { get; private set; }
 
         private const string TransactionFlag = "Transactions";
+        private const string MinIdxFlag = "Trans Post";
         private const string PaymentFlag = "Payments";
         private const string CreditFlag = "Other Credits";
         private const string PurchaseFlag = "Purchases, Balance Transfers & Other Charges";
-        private const string FeesFlag = "Fees Charged";
-        private const string InterestFlag = "Interest Charged";
+        private const string FeesFlag = "TOTAL FEES CHARGED FOR THIS PERIOD";
+        private const string InterestFlag = "TOTAL INTEREST CHARGED FOR THIS PERIOD";
         private const string EndOfData = "Totals Year-to-Date";
 
-        public CreditSectionInfo(IList<ITextString> pageText)
+        public CreditSectionInfo(IList<ITextString> pageText, int lastFour, int year)
         {
             pageTextStrings = pageText;
+            CardLast4 = lastFour;
+            Year = year;
             InitializeInfo();
         }
 
         private void InitializeInfo()
         {
-            IdxTransactions = GetIndexFromFlag(TransactionFlag);
-            if (IdxTransactions == -1)
+            IdxMin = GetIndexFromFlag(MinIdxFlag);
+            if (IdxMin == -1)
             {
                 ResetIndexes();
             }
             else
             {
-                IdxFees = GetIndexFromFlag(FeesFlag);
-                IdxCredit = GetIndexFromFlag(CreditFlag);
-                IdxInterest = GetIndexFromFlag(InterestFlag);
-                IdxPayments = GetIndexFromFlag(PaymentFlag);
-                IdxPurchases = GetIndexFromFlag(PurchaseFlag);
+                IdxFees = GetIndexFromFlag(FeesFlag, true);
+                IdxCredit = GetIndexFromFlag(CreditFlag, true);
+                IdxInterest = GetIndexFromFlag(InterestFlag, true);
+                IdxPayments = GetIndexFromFlag(PaymentFlag, true);
+                IdxPurchases = GetIndexFromFlag(PurchaseFlag, true);
             }
             SetBoolsFromIndexes();
             SetNexSection();
@@ -94,7 +100,7 @@ namespace statementReader.Contracts
         private void ResetIndexes()
         {
 
-            IdxTransactions = -1;
+            IdxMin = -1;
             IdxPurchases = -1;
             IdxFees = -1;
             IdxInterest = -1;
@@ -111,7 +117,6 @@ namespace statementReader.Contracts
         /// Updates the indices and bools based on type passed in.
         /// </summary>
         /// <returns>The index for the beginning of the next section.</returns>
-        /// <param name="section">The section just completed.</param>
         public int GetNextIdx()
         {
             switch(CurrentSectionType)
@@ -217,12 +222,18 @@ namespace statementReader.Contracts
             GetCredits = IdxCredit > -1;
         }
 
-        private int GetIndexFromFlag(string flag)
+        private int GetIndexFromFlag(string flag, bool addOne = false)
         {
+            if (flag == PurchaseFlag)
+            {
+                addOne = true;
+            }
             var match = GetTextStringMatch(flag);
-            return match == null
+            var add = addOne ? 1 : 0;
+            var retVal = match == null
                 ? -1
-                : GetIndex(match)+1;
+                : GetIndex(match) + add;
+            return retVal;
         }
 
         private int GetIndex(ITextString textString)
@@ -231,7 +242,7 @@ namespace statementReader.Contracts
         }
         private ITextString GetTextStringMatch(string flag)
         {
-            return pageTextStrings.FirstOrDefault(y => y.Text.Contains(flag));
+            return pageTextStrings.FirstOrDefault(y => y.Text.Contains(flag) && pageTextStrings.IndexOf(y) >= IdxMin);
         }
     }
 }

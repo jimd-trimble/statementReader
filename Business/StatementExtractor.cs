@@ -49,7 +49,6 @@ namespace statementReader.Business
                 IList<ITextString> pageTextStrings;
                 try
                 {
-                    var tst1 = extractor.Extract(page);
                     pageTextStrings = extractor.Extract(page)[TextExtractor.DefaultArea];
                 }
                 catch(Exception e)
@@ -64,15 +63,17 @@ namespace statementReader.Business
                 }
 
                 var year = GetYear(pageTextStrings);
-                transactions.AddRange(TextIterator(pageTextStrings, year));
+
+                int.TryParse(accountFlag.Substring(accountFlag.Length - 4), out var last4);
+                var statementInfo = new CreditSectionInfo(pageTextStrings, last4, year);
+                transactions.AddRange(TextIterator(statementInfo));
             }
 
             return transactions;
         }
 
-        private IEnumerable<Transaction> TextIterator(IList<ITextString> pageTextStrings, int year)
+        private IEnumerable<Transaction> TextIterator(CreditSectionInfo statementInfo)
         {
-           var statementInfo = new CreditSectionInfo(pageTextStrings);
            if (statementInfo.LastPage() && statementInfo.CurrentSectionType == SectionType.None)
            {
                return new Transaction[]{};
@@ -85,12 +86,16 @@ namespace statementReader.Business
             }
 
             var transactions = new List<Transaction>();
-            Transaction transactionNowAndPrevious = null;
-            while(idx > -1)
+            while(idx > -1 && idx < statementInfo.pageTextStrings.Count)
             {
                 var textString = statementInfo.pageTextStrings[idx];
                 var textParts = textString.Text.Trim().Split(' ').ToList();
-                if (textParts.Any(x => x.Contains(CreditSectionInfo.EndOfSectionFlag)))
+                var endOfSection = textString.Text.Contains(CreditSectionInfo.EndOfSectionFlag);
+                var holdEndOfSection = endOfSection &&
+                                       (statementInfo.CurrentSectionType == SectionType.Fees
+                                       || statementInfo.CurrentSectionType == SectionType.Interest);
+
+                if (!holdEndOfSection && endOfSection)
                 {
                     idx = statementInfo.GetNextIdx();
                     continue;
@@ -108,25 +113,28 @@ namespace statementReader.Business
                 var couldParse = false;
                 for (var n = textParts.Count- 1; n > 0; n--)
                 {
-                    couldParse = decimal.TryParse(textParts[n], out amnt);
+                    couldParse = decimal.TryParse(textParts[n].Replace("$", ""), out amnt);
                     if (couldParse)
                     {
+//                      Check to make sure this is ONLY breaking at the end of a dollar amount.
+//                      Just about any string can be parsed into a number.
                         break;
                     }
                 }
 
                 if (couldParse)
                 {
+                    // ToDo: Remove unnecessary vaariable 'desc'
                     var desc = textParts.ToList();
                     if (textParts[0].Contains("/"))
                     {
-                        var dateString = $"{textParts[0]}/{year}";
+                        var dateString = $"{textParts[0]}/{statementInfo.Year}";
                         DateTime.TryParse(dateString, out dateTest);
                         desc.RemoveAt(0);
                         desc.RemoveAt(0);
                     }
 
-                    desc.RemoveAt(textParts.Count - 1);
+                    desc.RemoveAt(desc.Count - 1);
                     desc = desc.Select(x => x.Trim().Replace(',', '|')).ToList();
 
 //                    var tstChrs = textString.TextChars.Where(y => y.Virtual).ToList();
@@ -153,31 +161,37 @@ namespace statementReader.Business
                             throw new ArgumentOutOfRangeException();
                     }
 
-                    transactionNowAndPrevious = new Transaction
+                    var reference = string.Empty;
+                    if (holdEndOfSection)
+                    {
+                        reference = desc[0];
+                        desc.RemoveAt(0);
+                    }
+                    var transactionNowAndPrevious = new Transaction
                     {
                         Id = Guid.NewGuid(),
                         Amount = amnt,
                         Date = dateTest,
+                        Card = statementInfo.CardLast4,
+                        Reference = reference,
                         Description = string.Join(" ", desc),
                         Type = transType
                     };
+                    transactions.Add(transactionNowAndPrevious);
                 }
                 
                 // For transactions with descriptions that "wrap" across lines
-                else
-                {
-                    int? card = null;
-                    var desc = textString.Text.Trim().Split(' ').ToList();
-                    if ((desc.Count > 1 && desc[desc.Count - 2].ToLower() == "card" || desc[desc.Count - 1].Trim()
-                            .Length == 4) && int.TryParse(desc[desc.Count - 1], out var cardTst))
-                    {
-                        card = cardTst;
-                    }
+//                else
+//                {
+//                    transactionNowAndPrevious = transactionNowAndPrevious ?? new Transaction();
+//                    transactionNowAndPrevious.Description += $" {textString.Text}";
+//                    transactions.Add(transactionNowAndPrevious);
+//                }
 
-                    transactionNowAndPrevious = transactionNowAndPrevious ?? new Transaction();
-                    transactionNowAndPrevious.Card = card;
-                    transactionNowAndPrevious.Description += $" {textString.Text}";
-                    transactions.Add(transactionNowAndPrevious);
+                if (holdEndOfSection)
+                {
+                    idx = statementInfo.GetNextIdx();
+                    continue;
                 }
                 idx++;
             }
