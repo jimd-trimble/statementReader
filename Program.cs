@@ -21,7 +21,7 @@ namespace statementReader
         private static long savings2 = 3650; // unknown brokerage accnt b/t Katiana & Chris, opened 12/18/2013. Ed passed spring 2015...
         private static long katCredit = 4465420198396160;
         private static List<Account> allAccounts;
-        private static string year = "2017";
+        private static string year = "2018";
         private static bool creditOnly = true;
 
         public static int Main(string[] args)
@@ -37,6 +37,9 @@ namespace statementReader
                 SetUpAccounts();
                 GetTransactions();
                 writeDataToCsv();
+
+                Console.WriteLine("Press any key exit.");
+                Console.ReadKey(true);
 
                 return 0;
             }
@@ -154,21 +157,22 @@ namespace statementReader
 
         private static void writeDataToCsv()
         {
-            foreach (var a in allAccounts)
+            var outputCnt = 0;
+            var outAccnts = allAccounts.Where(x => x.Transactions.Any()).ToList();
+            foreach (var a in outAccnts)
             {
-                if (a.Transactions == null || !a.Transactions.Any())
-                {
-                    continue;
-                }
-                using (var writer = new System.IO.StreamWriter(docPath + $"WF_{year}_{a.Name}.csv"))
+                var outputFile = docPath + $"WF_{year}_{a.Name}.csv";
+                using (var writer = new StreamWriter(outputFile))
                 using (var csv = new CsvWriter(writer))
                 {
                     csv.Configuration.TypeConverterOptionsCache.GetOptions<DateTime>().Formats = new[] { "d" };
                     csv.WriteRecords(a.Transactions);
                     writer.Flush();
+                    outputCnt++;
+                    Console.WriteLine($"Successfully wrote file {outputFile}");
                 }
             }
+            Console.WriteLine($"{outputCnt} of {outAccnts.Count} created. End of program");
         }
-
     }
 }

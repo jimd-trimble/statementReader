@@ -24,8 +24,8 @@ namespace statementReader.Contracts
         public static string EndOfSectionFlag { get; } = "FOR THIS PERIOD";
         public IList<ITextString> pageTextStrings { get; }
         public int CurrentSectionIdx { get; private set; }
-        public int CardLast4 { get; set; }
-        public int Year { get; set; }
+        public int CardLast4 { get; }
+        public int Year { get; }
         public SectionType CurrentSectionType { get; private set; }
         public bool GetPurchases { get; private set; }
         public bool GetFees { get; private set; }

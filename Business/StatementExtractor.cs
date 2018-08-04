@@ -44,8 +44,10 @@ namespace statementReader.Business
         {
             var extractor = new TextExtractor();
             var transactions = new List<Transaction>();
+            var pgcnt = 0;
             foreach (var page in pages)
             {
+                pgcnt++;
                 IList<ITextString> pageTextStrings;
                 try
                 {
@@ -53,7 +55,7 @@ namespace statementReader.Business
                 }
                 catch(Exception e)
                 {
-                    Console.WriteLine(e);
+                    Console.WriteLine("Continuing after common TextExtractor failure.");
                     continue;
                 }
 
@@ -66,6 +68,18 @@ namespace statementReader.Business
 
                 int.TryParse(accountFlag.Substring(accountFlag.Length - 4), out var last4);
                 var statementInfo = new CreditSectionInfo(pageTextStrings, last4, year);
+                if (statementInfo.LastPage() && statementInfo.CurrentSectionType == SectionType.None)
+               {
+                   continue;
+               }
+
+                if (statementInfo.CurrentSectionIdx == -1)
+                {
+                    // The page has the account flag so no need to throw.
+                    // It is possible that the page has an account flag but no transactions.
+                    continue;
+                }
+
                 transactions.AddRange(TextIterator(statementInfo));
             }
 
@@ -74,18 +88,8 @@ namespace statementReader.Business
 
         private IEnumerable<Transaction> TextIterator(CreditSectionInfo statementInfo)
         {
-           if (statementInfo.LastPage() && statementInfo.CurrentSectionType == SectionType.None)
-           {
-               return new Transaction[]{};
-           }
-
-            var idx = statementInfo.CurrentSectionIdx;
-            if (idx == -1)
-            {
-                throw new Exception("Could not determine where to start!");
-            }
-
             var transactions = new List<Transaction>();
+            var idx = statementInfo.CurrentSectionIdx;
             while(idx > -1 && idx < statementInfo.pageTextStrings.Count)
             {
                 var textString = statementInfo.pageTextStrings[idx];
@@ -107,7 +111,6 @@ namespace statementReader.Business
                     continue;
                 }
                 
-                // Trans [07/24] | Post [07/26] | Reference Number | Description | Credits | Charges
                 var dateTest = DateTime.MinValue;
                 decimal amnt = 0;
                 var couldParse = false;
