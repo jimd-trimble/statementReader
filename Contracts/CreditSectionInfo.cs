@@ -48,6 +48,28 @@ namespace statementReader.Contracts
         private const string FeesFlag = "TOTAL FEES CHARGED FOR THIS PERIOD";
         private const string InterestFlag = "TOTAL INTEREST CHARGED FOR THIS PERIOD";
         private const string EndOfData = "Totals Year-to-Date";
+        
+        /*
+         * Possible EndOfData flags:
+         * 5596      YKG 1 7 17 161226 0 PAGE 2 of 2 10 5583 2000 VSE2
+         *     - not sure if 5996 is consistent across all years but it is across 2016, 2017.
+         *     - same with YKG
+         *     - the 161226 seems to be a formatted date: 12/26/2016
+         *
+         *
+         * LinesToSkip:
+         * Minimum Payment
+         * New Balance
+         * ARVADA CO 80007-6704
+         *
+         * Skip these also, doubling up Interest and Fees
+         *     - INTEREST CHARGED FOR THIS PERIOD
+         *     - TOTAL FEES CHARGED IN 2016 
+         *     - TOTAL INTEREST CHARGED IN 2016
+         *     - PURCHASES 7.65% $0.00 30
+         *     - CASH ADVANCES 7.65% $0.00 30
+         *     - credit balance
+         */
 
         public CreditSectionInfo(IList<ITextString> pageText, int lastFour, int year)
         {
